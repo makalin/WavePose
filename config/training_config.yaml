@@ -1,0 +1,211 @@
+# WavePose Training Configuration
+
+# Model Configuration
+model:
+  num_classes: 2  # background + person
+  num_keypoints: 17
+  num_body_regions: 24
+  use_fpn: true
+  pretrained: false
+  
+  # Modality Translation Network
+  csi_config:
+    input_channels: 2  # amplitude and phase
+    num_antennas: 3
+    num_subcarriers: 64
+    hidden_dims: [128, 256, 512]
+    output_size: [256, 256]
+    use_attention: true
+    dropout: 0.1
+  
+  # WiFi Backbone
+  backbone_config:
+    in_channels: 3
+    out_channels: 256
+    num_layers: 4
+    use_residual: true
+    use_attention: true
+  
+  # Keypoint Head
+  keypoint_config:
+    in_channels: 256
+    num_keypoints: 17
+    heatmap_size: [64, 64]
+    use_attention: true
+    use_offset: true
+  
+  # DensePose Head
+  densepose_config:
+    in_channels: 256
+    num_body_regions: 24
+    uv_size: [256, 256]
+    use_attention: true
+    use_region_classification: true
+
+# Data Configuration
+data:
+  target_size: [256, 256]
+  num_workers: 4
+  pin_memory: true
+  val_split: 0.2
+
+# Training Configuration
+training:
+  batch_size: 16
+  num_epochs: 100
+  learning_rate: 1e-4
+  weight_decay: 1e-4
+  gradient_clip: 1.0
+  mixed_precision: true
+  early_stopping_patience: 20
+  
+  # Loss weights
+  loss_weights:
+    detection: 1.0
+    keypoint: 1.0
+    densepose: 1.0
+  
+  # Loss types
+  loss_types:
+    keypoint: 'mse'  # 'mse', 'focal', 'wing'
+    densepose: 'mse'  # 'mse', 'smooth_l1'
+
+# Optimizer Configuration
+optimizer:
+  type: 'adam'  # 'adam', 'adamw', 'sgd', 'rmsprop', 'adagrad'
+  learning_rate: 1e-4
+  weight_decay: 1e-4
+  kwargs:
+    betas: [0.9, 0.999]
+    eps: 1e-8
+
+# Scheduler Configuration
+scheduler:
+  type: 'cosine'  # 'cosine', 'step', 'plateau', 'cosine_warm_restarts', 'onecycle', 'none'
+  kwargs:
+    # For cosine annealing
+    T_max: 100
+    
+    # For step LR
+    step_size: 30
+    gamma: 0.1
+    
+    # For plateau
+    mode: 'min'
+    factor: 0.1
+    patience: 10
+    verbose: true
+    
+    # For cosine warm restarts
+    T_0: 10
+    T_mult: 2
+    eta_min: 0
+    
+    # For onecycle
+    max_lr: 1e-3
+    pct_start: 0.3
+    anneal_strategy: 'cos'
+
+# Hardware Configuration
+hardware:
+  device: 'auto'  # 'auto', 'cuda', 'cpu'
+  num_workers: 4
+  mixed_precision: true
+
+# Output Configuration
+output:
+  save_dir: './checkpoints'
+  log_dir: './logs'
+  save_freq: 10  # Save checkpoint every N epochs
+  val_freq: 5    # Validate every N epochs
+
+# Logging Configuration
+logging:
+  level: 'INFO'
+  tensorboard: true
+  wandb: false  # Weights & Biases integration
+  
+  # Metrics to log
+  metrics:
+    - 'loss'
+    - 'pck'
+    - 'uv_accuracy'
+    - 'classification_accuracy'
+    - 'bbox_iou'
+
+# Data Augmentation
+augmentation:
+  enabled: true
+  
+  # CSI augmentation
+  csi:
+    noise_std: 0.01
+    phase_shift: 0.1
+    amplitude_scale: 0.1
+  
+  # Pose augmentation
+  pose:
+    rotation: 15  # degrees
+    translation: 0.1
+    scale: 0.1
+
+# Transfer Learning
+transfer_learning:
+  enabled: false
+  pretrained_model: null
+  freeze_backbone: false
+  freeze_modality_translation: false
+  
+  # Teacher-student setup
+  teacher_student:
+    enabled: false
+    teacher_model: null
+    distillation_weight: 0.1
+    temperature: 4.0
+
+# Validation Configuration
+validation:
+  metrics:
+    - 'pck'
+    - 'uv_accuracy'
+    - 'classification_accuracy'
+    - 'bbox_iou'
+  
+  # PCK thresholds
+  pck_thresholds: [0.05, 0.1, 0.2]
+  
+  # IoU thresholds for detection
+  iou_thresholds: [0.5, 0.75]
+
+# Testing Configuration
+testing:
+  checkpoint_path: null
+  test_data_dir: null
+  output_dir: './test_results'
+  save_predictions: true
+  create_visualizations: true
+  create_video: false
+  fps: 30
+
+# Advanced Configuration
+advanced:
+  # Gradient accumulation
+  gradient_accumulation_steps: 1
+  
+  # Learning rate warmup
+  warmup_steps: 0
+  warmup_lr: 1e-6
+  
+  # Model checkpointing
+  save_best_only: false
+  save_last: true
+  
+  # Mixed precision
+  fp16: true
+  bf16: false
+  
+  # Distributed training
+  distributed: false
+  backend: 'nccl'
+  world_size: 1
+  rank: 0
